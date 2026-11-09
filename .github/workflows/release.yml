@@ -1,0 +1,74 @@
+name: Release Arduino Manager GUI
+
+on:
+  push:
+    tags:
+      - 'v*' # Запуск при создании тега (например, v1.0.0)
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: arduino-manager-gui
+            asset_name: arduino-manager-gui-linux
+          - os: windows-latest
+            artifact_name: arduino-manager-gui.exe
+            asset_name: arduino-manager-gui-windows.exe
+          - os: macos-latest
+            artifact_name: arduino-manager-gui
+            asset_name: arduino-manager-gui-macos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      # Установка зависимостей для Linux (Fyne требует OpenGL и X11)
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      # Сборка (включаем CGO, так как Fyne требует компиляции C-кода)
+      - name: Build
+        env:
+          CGO_ENABLED: 1
+        run: go build -v -o ${{ matrix.artifact_name }} main.go
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.artifact_name }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/arduino-manager-gui-linux/*
+            artifacts/arduino-manager-gui-windows.exe/*
+            artifacts/arduino-manager-gui-macos/*
+          generate_release_notes: true
