@@ -11,6 +11,7 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -24,7 +25,8 @@ jobs:
             asset_name: arduino-manager-gui-macos
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -35,9 +37,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev libxkbcommon-dev libasound2-dev
 
-      # ВОТ ОНА, ВОЛШЕБНАЯ КОМАНДА, КОТОРАЯ СКАЧАЕТ FYNE
       - name: Download dependencies
         run: go mod tidy
 
@@ -62,9 +63,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
