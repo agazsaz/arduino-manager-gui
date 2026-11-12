@@ -3,7 +3,7 @@ name: Release Arduino Manager GUI
 on:
   push:
     tags:
-      - 'v*' # Запуск при создании тега (например, v1.0.0)
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -31,14 +31,16 @@ jobs:
         with:
           go-version: '1.22'
 
-      # Установка зависимостей для Linux (Fyne требует OpenGL и X11)
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev xorg-dev
 
-      # Сборка (включаем CGO, так как Fyne требует компиляции C-кода)
+      # ВОТ ОНА, ВОЛШЕБНАЯ КОМАНДА, КОТОРАЯ СКАЧАЕТ FYNE
+      - name: Download dependencies
+        run: go mod tidy
+
       - name: Build
         env:
           CGO_ENABLED: 1
